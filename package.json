@@ -1,0 +1,35 @@
+{
+  "name": "f2e-middle-esbuild",
+  "version": "0.1.0",
+  "description": "f2e-server middleware for esbuild",
+  "main": "lib/index.js",
+  "files": ["lib", ".esbuildrc.js"],
+  "scripts": {
+    "test": " ",
+    "tsc": "tsc",
+    "prepublish": "tsc"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/f2e-server/f2e-middle-esbuild.git"
+  },
+  "keywords": [
+    "f2e-server",
+    "middleware",
+    "esbuild"
+  ],
+  "author": "shy2850",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/f2e-server/f2e-middle-esbuild/issues"
+  },
+  "homepage": "https://github.com/f2e-server/f2e-middle-esbuild#readme",
+  "dependencies": {
+    "esbuild": "^0.6.27",
+    "f2e-server": "^2.12.15"
+  },
+  "devDependencies": {
+    "@types/node": "^14.6.0",
+    "typescript": "^4.0.2"
+  }
+}
