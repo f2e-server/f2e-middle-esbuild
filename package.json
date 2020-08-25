@@ -3,6 +3,7 @@
   "version": "0.1.0",
   "description": "f2e-server middleware for esbuild",
   "main": "lib/index.js",
+  "types": "lib/index.d.ts",
   "files": ["lib", ".esbuildrc.js"],
   "scripts": {
     "test": " ",
