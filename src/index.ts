@@ -3,6 +3,9 @@ import * as esbuild from 'esbuild'
 import * as path from 'path'
 import * as zlib from 'zlib'
 
+const fixPathArr = (pathname: string): string[] => pathname ? (pathname.match(/[^\\/]+/g) || []) : []
+const fixPath = (pathname: string): string => fixPathArr(pathname).join('/')
+
 namespace creater {
     export interface BuildOptions extends esbuild.BuildOptions {
         watches?: RegExp[]
@@ -34,7 +37,7 @@ const creater: MiddlewareCreater = (conf, options = {}) => {
                     if (outputFiles && outputFiles.length) {
                         for (let i = 0; i < outputFiles.length; i++) {
                             const outputFile = outputFiles[i];
-                            const outputPath = path.relative(root, outputFile.path);
+                            const outputPath = fixPath(path.relative(root, outputFile.path));
                             let info: any = outputFile.contents
                             if (outputFile.path.endsWith('.js')) {
                                 let map_file = "\n//# sourceMappingURL=" + outputFile.path.split('/').pop().replace('.js', '.js.map') + '\n'
