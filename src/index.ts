@@ -21,11 +21,13 @@ const creater: MiddlewareCreater = (conf, options = {}) => {
     }: creater.BuildOptions = require(path.join(root, esbuildrc));
 
     const data_map = new Map<string, any>()
+    // 编译中的文件
     const building_set = new Set<string>()
+    // 等待编译的文件
+    const needbuilds = new Set<string>()
     return {
         onSet: async (pathname, data, store) => {
             if (entryPoints.includes(pathname)) {
-                building_set.add(pathname);
                 try {
                     const result = await esbuild.build({
                         ...base_config,
@@ -39,8 +41,8 @@ const creater: MiddlewareCreater = (conf, options = {}) => {
                             const outputFile = outputFiles[i];
                             const outputPath = fixPath(path.relative(root, outputFile.path));
                             let info: any = outputFile.contents
-                            if (outputFile.path.endsWith('.js')) {
-                                let map_file = "\n//# sourceMappingURL=" + outputFile.path.split('/').pop().replace('.js', '.js.map') + '\n'
+                            if (outputPath.endsWith('.js')) {
+                                let map_file = "\n//# sourceMappingURL=" + outputPath.split('/').pop().replace('.js', '.js.map') + '\n'
                                 info = Buffer.concat([info, new Uint8Array(map_file.split('').map(c => c.charCodeAt(0)))]).buffer
                             }
                             store._set(outputPath, info);
@@ -52,7 +54,6 @@ const creater: MiddlewareCreater = (conf, options = {}) => {
                     console.log(e)
                     return data;
                 }
-                building_set.delete(pathname);
             }
             return data;
         },
@@ -70,14 +71,22 @@ const creater: MiddlewareCreater = (conf, options = {}) => {
         buildWatcher: async (pathname, type, build) => {
             const find = watches.find(reg => reg.test(pathname))
             if (find) {
-                for (let i = 0; i < entryPoints.length; i++) {
-                    if (!building_set.has(entryPoints[i])) {
-                        const key = `esbuild: ${entryPoints[i]}`
+                entryPoints.forEach(async (entry) => {
+                    if (!building_set.has(entry)) {
+                        building_set.add(entry);
+                        const key = `esbuild: ${entry}`
                         console.time(key)
-                        await build(entryPoints[i])
+                        await build(entry)
+                        if (needbuilds.has(entry)) {
+                            needbuilds.delete(entry)
+                            await build(entry)
+                        }
+                        building_set.delete(entry);
                         console.timeEnd(key)
+                    } else {
+                        needbuilds.add(entry)
                     }
-                }
+                })
             }
         }
     }
