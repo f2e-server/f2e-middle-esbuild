@@ -40,10 +40,10 @@ const creater: MiddlewareCreater = (conf, options = {}) => {
                         for (let i = 0; i < outputFiles.length; i++) {
                             const outputFile = outputFiles[i];
                             const outputPath = fixPath(path.relative(root, outputFile.path));
-                            let info: any = outputFile.contents
+                            let info = Buffer.concat([outputFile.contents]);
                             if (outputPath.endsWith('.js')) {
                                 let map_file = "\n//# sourceMappingURL=" + outputPath.split('/').pop().replace('.js', '.js.map') + '\n'
-                                info = Buffer.concat([info, new Uint8Array(map_file.split('').map(c => c.charCodeAt(0)))]).buffer
+                                info = Buffer.concat([outputFile.contents, new Uint8Array(map_file.split('').map(c => c.charCodeAt(0)))])
                             }
                             store._set(outputPath, info);
                             data_map.set(outputPath, info);
