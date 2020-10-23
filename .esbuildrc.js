@@ -9,7 +9,7 @@ let config = {
     external: ['serve/interface.ts'],
     entryPoints: ['src/index.tsx'],
     outfile: 'static/bundle.js',
-    target: 'esnext',
+    target: 'chrome49',
     jsxFactory: 'React.createElement',
     bundle: true,
     format: 'iife',

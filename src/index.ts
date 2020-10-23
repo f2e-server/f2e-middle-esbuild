@@ -74,15 +74,12 @@ const creater: MiddlewareCreater = (conf, options = {}) => {
                 entryPoints.forEach(async (entry) => {
                     if (!building_set.has(entry)) {
                         building_set.add(entry);
-                        const key = `esbuild: ${entry}`
-                        console.time(key)
                         await build(entry)
                         if (needbuilds.has(entry)) {
                             needbuilds.delete(entry)
                             await build(entry)
                         }
                         building_set.delete(entry);
-                        console.timeEnd(key)
                     } else {
                         needbuilds.add(entry)
                     }
