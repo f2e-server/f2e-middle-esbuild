@@ -20,6 +20,7 @@ const creater: MiddlewareCreater = (conf, options = {}) => {
         ...base_config
     }: creater.BuildOptions = require(path.join(root, esbuildrc));
 
+    const entries = Object.entries(entryPoints)
     const data_map = new Map<string, any>()
     // 编译中的文件
     const building_set = new Set<string>()
@@ -27,11 +28,13 @@ const creater: MiddlewareCreater = (conf, options = {}) => {
     const needbuilds = new Set<string>()
     return {
         onSet: async (pathname, data, store) => {
-            if (entryPoints.includes(pathname)) {
+            const entry = entries.find(([k, v]) => v === pathname)
+            if (entry) {
                 try {
+                    const [k, v] = entry
                     const result = await esbuild.build({
                         ...base_config,
-                        entryPoints: [path.join(root, pathname)],
+                        entryPoints: isNaN(Number(k)) ? [v] : {[k]: v},
                         write: false,
                         minify: build
                     });
@@ -71,7 +74,7 @@ const creater: MiddlewareCreater = (conf, options = {}) => {
         buildWatcher: async (pathname, type, build) => {
             const find = watches.find(reg => reg.test(pathname))
             if (find) {
-                entryPoints.forEach(async (entry) => {
+                entries.forEach(async ([k, entry]) => {
                     if (!building_set.has(entry)) {
                         building_set.add(entry);
                         await build(entry)
