@@ -1,8 +1,8 @@
 import { MiddlewareCreater } from 'f2e-server'
 import * as esbuild from 'esbuild'
 import * as path from 'path'
-import * as zlib from 'zlib'
 
+const createUtils = require('f2e-server/lib/util/resp')
 const fixPathArr = (pathname: string): string[] => pathname ? (pathname.match(/[^\\/]+/g) || []) : []
 const fixPath = (pathname: string): string => fixPathArr(pathname).join('/')
 
@@ -13,13 +13,14 @@ namespace creater {
 }
 const creater: MiddlewareCreater = (conf, options = {}) => {
     const { root, gzip, build } = conf
+    const { handleSuccess } = createUtils(conf)
     const { esbuildrc = '.esbuildrc.js', options: runtimeOptions } = options
     const {
         watches = [/\.[jet]?sx?$/],
         entryPoints,
         ...base_config
     }: creater.BuildOptions = Object.assign({}, require(path.join(root, esbuildrc)), runtimeOptions);
-
+    
     const entries = Object.entries(entryPoints)
     const data_map = new Map<string, any>()
     // 编译中的文件
@@ -62,12 +63,8 @@ const creater: MiddlewareCreater = (conf, options = {}) => {
         },
         onRoute: (pathname, req, resp) => {
             const data = data_map.get(pathname)
-            if (gzip && data) {
-                resp.writeHead(200, {
-                    'Content-Type': 'application/javascript; charset=utf-8',
-                    'Content-Encoding': gzip ? 'gzip' : 'utf-8',
-                })
-                resp.end(gzip ? zlib.gzipSync(data): data)
+            if (data) {
+                handleSuccess(req, resp, pathname, data)
                 return false
             }
         },
