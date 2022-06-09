@@ -13,12 +13,12 @@ namespace creater {
 }
 const creater: MiddlewareCreater = (conf, options = {}) => {
     const { root, gzip, build } = conf
-    const { esbuildrc = '.esbuildrc.js' } = options
+    const { esbuildrc = '.esbuildrc.js', options: runtimeOptions } = options
     const {
         watches = [/\.[jet]?sx?$/],
         entryPoints,
         ...base_config
-    }: creater.BuildOptions = require(path.join(root, esbuildrc));
+    }: creater.BuildOptions = Object.assign({}, require(path.join(root, esbuildrc)), runtimeOptions);
 
     const entries = Object.entries(entryPoints)
     const data_map = new Map<string, any>()
