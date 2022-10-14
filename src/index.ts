@@ -35,7 +35,7 @@ const creater: MiddlewareCreater = (conf, options = {}) => {
                     const [k, v] = entry
                     const result = await esbuild.build({
                         ...base_config,
-                        entryPoints: isNaN(Number(k)) ? [v] : {[k]: v},
+                        entryPoints: isNaN(Number(k)) ? {[k]: v} : [v],
                         write: false,
                         minify: build
                     });
