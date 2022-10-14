@@ -7,9 +7,11 @@ let config = {
     watches: [/\.[jet]?sx?$/],
     sourcemap: 'external',
     external: ['serve/interface.ts'],
-    entryPoints: ['src/index.tsx'],
-    outfile: 'static/bundle.js',
-    target: 'chrome49',
+    entryPoints: {
+        index: 'src/index.tsx'
+    },
+    outdir: 'static',
+    target: 'chrome70',
     jsxFactory: 'React.createElement',
     bundle: true,
     format: 'iife',
