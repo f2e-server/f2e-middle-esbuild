@@ -2,9 +2,7 @@ import { MiddlewareCreater } from 'f2e-server'
 import * as esbuild from 'esbuild'
 import * as path from 'path'
 
-const createUtils = require('f2e-server/lib/util/resp')
-const fixPathArr = (pathname: string): string[] => pathname ? (pathname.match(/[^\\/]+/g) || []) : []
-const fixPath = (pathname: string): string => fixPathArr(pathname).join('/')
+const pathname_fixer = (str = '') => (str.match(/[^/\\]+/g) || []).join('/')
 
 namespace creater {
     export interface BuildOptions extends esbuild.BuildOptions {
@@ -12,8 +10,7 @@ namespace creater {
     }
 }
 const creater: MiddlewareCreater = (conf, options = {}) => {
-    const { root, gzip, build } = conf
-    const { handleSuccess } = createUtils(conf)
+    const { root, build } = conf
     const { esbuildrc = '.esbuildrc.js', options: runtimeOptions } = options
     const {
         watches = [/\.[jet]?sx?$/],
@@ -22,7 +19,9 @@ const creater: MiddlewareCreater = (conf, options = {}) => {
     }: creater.BuildOptions = Object.assign({}, require(path.join(root, esbuildrc)), runtimeOptions);
     
     const entries = Object.entries(entryPoints)
-    const data_map = new Map<string, any>()
+
+    /** 文件依赖，前面是entries */
+    const deps_map = new Map<string, string[]>()
     // 编译中的文件
     const building_set = new Set<string>()
     // 等待编译的文件
@@ -37,20 +36,21 @@ const creater: MiddlewareCreater = (conf, options = {}) => {
                         ...base_config,
                         entryPoints: isNaN(Number(k)) ? {[k]: v} : [v],
                         write: false,
+                        metafile: true,
                         minify: build
                     });
                     const outputFiles = result.outputFiles;
                     if (outputFiles && outputFiles.length) {
                         for (let i = 0; i < outputFiles.length; i++) {
                             const outputFile = outputFiles[i];
-                            const outputPath = fixPath(path.relative(root, outputFile.path));
+                            const outputPath = pathname_fixer(path.relative(root, outputFile.path));
                             let info = Buffer.concat([outputFile.contents]);
                             if (outputPath.endsWith('.js')) {
                                 let map_file = "\n//# sourceMappingURL=" + outputPath.split('/').pop().replace('.js', '.js.map') + '\n'
                                 info = Buffer.concat([outputFile.contents, new Uint8Array(map_file.split('').map(c => c.charCodeAt(0)))])
                             }
                             store._set(outputPath, info);
-                            data_map.set(outputPath, info);
+                            deps_map.set(pathname, Object.keys(result.metafile.inputs || {}).map(i => pathname_fixer(i)));
                         }
                     }
                 }
@@ -61,27 +61,22 @@ const creater: MiddlewareCreater = (conf, options = {}) => {
             }
             return data;
         },
-        onRoute: (pathname, req, resp) => {
-            const data = data_map.get(pathname)
-            if (data) {
-                handleSuccess(req, resp, pathname, data)
-                return false
-            }
-        },
         buildWatcher: async (pathname, type, build) => {
             const find = watches.find(reg => reg.test(pathname))
             if (find) {
-                entries.forEach(async ([k, entry]) => {
-                    if (!building_set.has(entry)) {
-                        building_set.add(entry);
-                        await build(entry)
-                        if (needbuilds.has(entry)) {
-                            needbuilds.delete(entry)
+                deps_map.forEach(async (deps, entry) => {
+                    if (deps.includes(pathname)) {
+                        if (!building_set.has(entry)) {
+                            building_set.add(entry);
                             await build(entry)
+                            if (needbuilds.has(entry)) {
+                                needbuilds.delete(entry)
+                                await build(entry)
+                            }
+                            building_set.delete(entry);
+                        } else {
+                            needbuilds.add(entry)
                         }
-                        building_set.delete(entry);
-                    } else {
-                        needbuilds.add(entry)
                     }
                 })
             }
