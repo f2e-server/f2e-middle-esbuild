@@ -20,6 +20,8 @@ const creater: MiddlewareCreater = (conf, options = {}) => {
     
     const entries = Object.entries(entryPoints)
 
+    /** 缓存的编译配置，增量执行 */
+    const result_map = new Map<string, esbuild.BuildIncremental>()
     /** 文件依赖，前面是entries */
     const deps_map = new Map<string, string[]>()
     // 编译中的文件
@@ -28,17 +30,28 @@ const creater: MiddlewareCreater = (conf, options = {}) => {
     const needbuilds = new Set<string>()
     return {
         onSet: async (pathname, data, store) => {
-            const entry = entries.find(([k, v]) => v === pathname)
-            if (entry) {
-                try {
-                    const [k, v] = entry
-                    const result = await esbuild.build({
-                        ...base_config,
-                        entryPoints: isNaN(Number(k)) ? {[k]: v} : [v],
-                        write: false,
-                        metafile: true,
-                        minify: build
-                    });
+            try {
+                const provider = result_map.get(pathname)
+                let result = provider as any
+                
+                if (provider) {
+                    result = await provider.rebuild()
+                } else {
+                    const entry = entries.find(([k, v]) => v === pathname)
+                    if (entry) {
+                        const [k, v] = entry
+                        result = await esbuild.build({
+                            incremental: true,
+                            ...base_config,
+                            entryPoints: isNaN(Number(k)) ? {[k]: v} : [v],
+                            write: false,
+                            metafile: true,
+                            minify: build
+                        });
+                        result_map.set(pathname, result)
+                    }
+                }
+                if (result) {
                     const outputFiles = result.outputFiles;
                     if (outputFiles && outputFiles.length) {
                         for (let i = 0; i < outputFiles.length; i++) {
@@ -54,10 +67,10 @@ const creater: MiddlewareCreater = (conf, options = {}) => {
                         }
                     }
                 }
-                catch (e) {
-                    console.log(e)
-                    return data;
-                }
+            }
+            catch (e) {
+                console.log(e)
+                return data;
             }
             return data;
         },
