@@ -1,6 +1,6 @@
 {
   "name": "f2e-middle-esbuild",
-  "version": "0.6.0",
+  "version": "0.6.1",
   "description": "f2e-server middleware for esbuild",
   "main": "lib/index.js",
   "types": "lib/index.d.ts",
@@ -29,7 +29,7 @@
   },
   "homepage": "https://github.com/f2e-server/f2e-middle-esbuild#readme",
   "dependencies": {
-    "esbuild": "^0.15.10",
+    "esbuild": "^0.15.13",
     "f2e-server": "^2.16.15"
   },
   "devDependencies": {

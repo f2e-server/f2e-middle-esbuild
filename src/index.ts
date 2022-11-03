@@ -41,12 +41,12 @@ const creater: MiddlewareCreater = (conf, options = {}) => {
                     if (entry) {
                         const [k, v] = entry
                         result = await esbuild.build({
-                            incremental: true,
-                            ...base_config,
-                            entryPoints: isNaN(Number(k)) ? {[k]: v} : [v],
+                            incremental: !build,
                             write: false,
                             metafile: true,
-                            minify: build
+                            minify: build,
+                            ...base_config,
+                            entryPoints: isNaN(Number(k)) ? {[k]: v} : [v],
                         });
                         result_map.set(pathname, result)
                     }
