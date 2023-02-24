@@ -5,20 +5,32 @@ import * as path from 'path'
 const pathname_fixer = (str = '') => (str.match(/[^/\\]+/g) || []).join('/')
 
 namespace creater {
-    export interface BuildOptions extends esbuild.BuildOptions {
-        watches?: RegExp[]
-    }
+    export type BuildOptions = esbuild.BuildOptions
 }
 const creater: MiddlewareCreater = (conf, options = {}) => {
     const { root, build } = conf
-    const { esbuildrc = '.esbuildrc.js', options: runtimeOptions } = options
-    const {
-        watches = [/\.[jet]?sx?$/],
-        entryPoints,
-        ...base_config
-    }: creater.BuildOptions = Object.assign({}, require(path.join(root, esbuildrc)), runtimeOptions);
-    
-    const entries = Object.entries(entryPoints)
+    const { esbuildrc = '.esbuildrc.js', watches = [/\.[jet]?sx?$/], options: runtimeOptions } = options
+    const option_map = ([].concat(require(path.join(root, esbuildrc))) as creater.BuildOptions[]).reduce((all, op) => {
+        const {
+            entryPoints,
+            ...base_config
+        }: creater.BuildOptions = Object.assign({}, op, runtimeOptions);
+        const entries = Object.entries(entryPoints)
+        entries.forEach(([k, v]) => {
+            if (typeof k === 'number') {
+                all.set(v, {
+                    entryPoints: [v],
+                    ...base_config,
+                })
+            } else {
+                all.set(v, {
+                    entryPoints: { [k]: v },
+                    ...base_config,
+                })
+            }
+        })
+        return all
+    }, new Map<string, esbuild.BuildOptions>())
 
     /** 缓存的编译配置，增量执行 */
     const result_map = new Map<string, esbuild.BuildIncremental>()
@@ -37,16 +49,14 @@ const creater: MiddlewareCreater = (conf, options = {}) => {
                 if (provider) {
                     result = await provider.rebuild()
                 } else {
-                    const entry = entries.find(([k, v]) => v === pathname)
+                    const entry = option_map.get(pathname)
                     if (entry) {
-                        const [k, v] = entry
                         result = await esbuild.build({
                             incremental: !build,
                             write: false,
                             metafile: true,
                             minify: build,
-                            ...base_config,
-                            entryPoints: isNaN(Number(k)) ? {[k]: v} : [v],
+                            ...entry,
                         });
                         result_map.set(pathname, result)
                     }

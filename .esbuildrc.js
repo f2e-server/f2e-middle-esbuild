@@ -1,7 +1,7 @@
 // @ts-check
 
 /**
- * @type { import('.').BuildOptions }
+ * @type { import('.').BuildOptions | import('.').BuildOptions[] }
  */
 let config = {
     watches: [/\.[jet]?sx?$/],
