@@ -64,7 +64,9 @@ const creater: MiddlewareCreater = (conf, options = {}) => {
                             const outputPath = pathname_fixer(path.relative(root, outputFile.path));
                             let info = Buffer.concat([outputFile.contents]);
                             store._set(outputPath, info);
-                            !build && store._set(outputPath + '.json', result.metafile);
+                            if (!build && /\.js$/.test(outputPath)) {
+                                store._set(outputPath + '.json', JSON.stringify(result.metafile));
+                            }
                             deps_map.set(pathname, Object.keys(result.metafile.inputs || {}).map(i => pathname_fixer(i)));
                         }
                     }
