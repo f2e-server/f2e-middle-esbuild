@@ -4,8 +4,7 @@
  * @type { import('.').BuildOptions | import('.').BuildOptions[] }
  */
 let config = {
-    watches: [/\.[jet]?sx?$/],
-    sourcemap: 'external',
+    sourcemap: true,
     external: ['serve/interface.ts'],
     entryPoints: {
         index: 'src/index.tsx'

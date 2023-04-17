@@ -33,7 +33,7 @@ const creater: MiddlewareCreater = (conf, options = {}) => {
     }, new Map<string, esbuild.BuildOptions>())
 
     /** 缓存的编译配置，增量执行 */
-    const result_map = new Map<string, esbuild.BuildIncremental>()
+    const ctx_map = new Map<string, esbuild.BuildContext>()
     /** 文件依赖，前面是entries */
     const deps_map = new Map<string, string[]>()
     // 编译中的文件
@@ -42,25 +42,20 @@ const creater: MiddlewareCreater = (conf, options = {}) => {
     const needbuilds = new Set<string>()
     return {
         onSet: async (pathname, data, store) => {
+            const entry = option_map.get(pathname)
+            const options: esbuild.BuildOptions = {
+                write: false,
+                metafile: true,
+                minify: build,
+                ...entry,
+            }
+
             try {
-                const provider = result_map.get(pathname)
-                let result = provider as any
-                
-                if (provider) {
-                    result = await provider.rebuild()
-                } else {
-                    const entry = option_map.get(pathname)
-                    if (entry) {
-                        result = await esbuild.build({
-                            incremental: !build,
-                            write: false,
-                            metafile: true,
-                            minify: build,
-                            ...entry,
-                        });
-                        result_map.set(pathname, result)
-                    }
+                let ctx = ctx_map.get(pathname)
+                if (!ctx) {
+                    ctx = await esbuild.context(options)
                 }
+                const result = await ctx.rebuild()
                 if (result) {
                     const outputFiles = result.outputFiles;
                     if (outputFiles && outputFiles.length) {
@@ -68,11 +63,8 @@ const creater: MiddlewareCreater = (conf, options = {}) => {
                             const outputFile = outputFiles[i];
                             const outputPath = pathname_fixer(path.relative(root, outputFile.path));
                             let info = Buffer.concat([outputFile.contents]);
-                            if (outputPath.endsWith('.js')) {
-                                let map_file = "\n//# sourceMappingURL=" + outputPath.split('/').pop().replace('.js', '.js.map') + '\n'
-                                info = Buffer.concat([outputFile.contents, new Uint8Array(map_file.split('').map(c => c.charCodeAt(0)))])
-                            }
                             store._set(outputPath, info);
+                            !build && store._set(outputPath + '.json', result.metafile);
                             deps_map.set(pathname, Object.keys(result.metafile.inputs || {}).map(i => pathname_fixer(i)));
                         }
                     }
