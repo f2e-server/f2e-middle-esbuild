@@ -27,7 +27,7 @@ module.exports = {
 // @ts-check
 
 /**
- * @type { import('f2e-middle-esbuild').BuildOptions }
+ * @type { import('f2e-middle-esbuild').BuildOptions[] }
  */
 let config = [
 {
@@ -47,9 +47,8 @@ let config = [
     },
     tsconfig: './tsconfig.json',
 },{
-    sourcemap: 'external',
+    sourcemap: true,
     external: [
-        'serve/interface.ts',
         'react',
         'react-dom',
     ],

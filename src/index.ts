@@ -66,14 +66,18 @@ const creater: MiddlewareCreater = (conf, options = {}) => {
                         for (let i = 0; i < outputFiles.length; i++) {
                             const outputFile = outputFiles[i];
                             const outputPath = pathname_fixer(path.relative(root, outputFile.path));
-                            let info = Buffer.concat([outputFile.contents]);
-                            store._set(outputPath, info);
                             if (!build && /\.js$/.test(outputPath)) {
                                 const meta_json = JSON.stringify(result.metafile)
                                 store._set(outputPath + '.json', meta_json);
                                 store._set(outputPath + '.html', html.analyze);
                             }
                             deps_map.set(pathname, Object.keys(result.metafile.inputs || {}).map(i => pathname_fixer(i)));
+                            
+                            let data = Buffer.concat([outputFile.contents]);
+                            return {
+                                outputPath,
+                                data,
+                            }
                         }
                     }
                 }
