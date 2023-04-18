@@ -107,4 +107,4 @@ require = (moduleName) => {
 ## Bundle Size Analyzer
 访问 [http://localhost:2850/static/libs.js.html](http://localhost:2850/static/libs.js.html)
 看到如下图：
-![Bundle Size Analyzer](./pages/analyze.png)
+![Bundle Size Analyzer](pages/analyze.png)
