@@ -1,7 +1,11 @@
 import { MiddlewareCreater } from 'f2e-server'
 import * as esbuild from 'esbuild'
 import * as path from 'path'
+import { readFileSync } from 'fs'
 
+const html = {
+    analyze: readFileSync(path.join(__dirname, '../pages/analyze.html')).toString()
+}
 const pathname_fixer = (str = '') => (str.match(/[^/\\]+/g) || []).join('/')
 
 namespace creater {
@@ -65,7 +69,9 @@ const creater: MiddlewareCreater = (conf, options = {}) => {
                             let info = Buffer.concat([outputFile.contents]);
                             store._set(outputPath, info);
                             if (!build && /\.js$/.test(outputPath)) {
-                                store._set(outputPath + '.json', JSON.stringify(result.metafile));
+                                const meta_json = JSON.stringify(result.metafile)
+                                store._set(outputPath + '.json', meta_json);
+                                store._set(outputPath + '.html', html.analyze);
                             }
                             deps_map.set(pathname, Object.keys(result.metafile.inputs || {}).map(i => pathname_fixer(i)));
                         }
