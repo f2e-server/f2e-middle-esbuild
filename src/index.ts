@@ -96,23 +96,33 @@ const creater: MiddlewareCreater = (conf, options = {}) => {
     const needbuilds = new Set<string>()
     return {
         onSet: async (pathname, data, store) => {
+            let result_js = {
+                outputPath: pathname,
+                data,
+            }
+            const entry = option_map.get(pathname)
+            if (!entry) {
+                return result_js
+            }
+            const options: esbuild.BuildOptions = {
+                write: false,
+                metafile: true,
+                minify: build,
+                ...entry,
+            }
             try {
-                let ctx = ctx_map.get(pathname)
-                if (!ctx) {
-                    const entry = option_map.get(pathname)
-                    const options: esbuild.BuildOptions = {
-                        write: false,
-                        metafile: true,
-                        minify: build,
-                        ...entry,
+                const result = await (async function (build) {
+                    if (build) {
+                        return esbuild.build(options)
                     }
-                    ctx = await esbuild.context(options)
-                }
-                const result = await ctx.rebuild()
-                let result_js = {
-                    outputPath: pathname,
-                    data,
-                }
+                    let ctx = ctx_map.get(pathname)
+                    if (!ctx) {
+                        ctx = await esbuild.context(options)
+                        ctx_map.set(pathname, ctx)
+                    }
+                    return ctx.rebuild()
+                })(build)
+
                 if (result) {
                     const outputFiles = result.outputFiles;
                     if (outputFiles && outputFiles.length) {
@@ -138,9 +148,7 @@ const creater: MiddlewareCreater = (conf, options = {}) => {
                         }
                     }
                 }
-                if (build) {
-                    ctx.dispose()
-                }
+                
                 return result_js
             }
             catch (e) {
