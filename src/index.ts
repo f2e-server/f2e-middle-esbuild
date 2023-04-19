@@ -47,6 +47,9 @@ const creater: MiddlewareCreater = (conf, options = {}) => {
                 ...require(cache_esbuild),
                 entryPoints: [entry],
                 globalName,
+                footer: {
+                    js: `\nthis['${globalName}'] = ${globalName};\n`
+                },
             })
             base_config.banner = {
                 js: `require = function (n) {
