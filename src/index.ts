@@ -1,24 +1,67 @@
 import { MiddlewareCreater } from 'f2e-server'
 import * as esbuild from 'esbuild'
 import * as path from 'path'
-import { readFileSync } from 'fs'
-
-const html = {
-    analyze: readFileSync(path.join(__dirname, '../pages/analyze.html')).toString()
-}
-const pathname_fixer = (str = '') => (str.match(/[^/\\]+/g) || []).join('/')
+import * as fs from 'fs'
+import { createExternal, defaultOptions, defaultTsconfig, html, pathname_fixer } from './utils'
 
 namespace creater {
     export type BuildOptions = esbuild.BuildOptions
 }
+
 const creater: MiddlewareCreater = (conf, options = {}) => {
     const { root, build } = conf
-    const { esbuildrc = '.esbuildrc.js', watches = [/\.[jet]?sx?$/], options: runtimeOptions } = options
-    const option_map = ([].concat(require(path.join(root, esbuildrc))) as creater.BuildOptions[]).reduce((all, op) => {
+    const {
+        esbuildrc = '.esbuildrc.js',
+        watches = [/\.[jet]?sx?$/],
+        cacheRoot = '.esbuild',
+        externalName = (index: number) => `external${index > 0 ? `.${index}` : ''}.ts`,
+        options: runtimeOptions,
+    } = options
+    const cache_root = path.join(root, cacheRoot)
+    if (!fs.existsSync(cache_root)) {
+        fs.mkdirSync(cache_root)
+    }
+    const cache_esbuild = path.join(cache_root, 'esbuild.json')
+    if (!fs.existsSync(cache_esbuild)) {
+        fs.writeFileSync(cache_esbuild, JSON.stringify(defaultOptions(cacheRoot), null, 2))
+    }
+    const cache_tsconfig = path.join(cache_root, 'tsconfig.json')
+    // 写入默认打包tsconfig
+    if (!fs.existsSync(cache_tsconfig)) {
+        fs.writeFileSync(cache_tsconfig, JSON.stringify(defaultTsconfig(cacheRoot), null, 2))
+    }
+    const option_map = ([].concat(require(path.join(root, esbuildrc))) as creater.BuildOptions[]).reduce((all, op, index) => {
         const {
             entryPoints,
             ...base_config
         }: creater.BuildOptions = Object.assign({}, op, runtimeOptions);
+
+        const { external = [] } = base_config
+        const globalName = `__LIBS__${index}`
+
+        if (external.length > 0) {
+            const libname = externalName(index)
+            fs.writeFileSync(path.join(cache_root, libname), createExternal(external))
+            const entry = `${cacheRoot}/${libname}`
+            all.set(entry, {
+                ...require(cache_esbuild),
+                entryPoints: [entry],
+                globalName,
+            })
+            base_config.banner = {
+                js: `require = function (n) {
+                    var m = window['${globalName}'][n];
+                    if (!m && '.' != n[0]) {
+                        console.error('module not found:', n);
+                    }
+                    if (m.default) {
+                        m = Object.assign(m.default, m)
+                    }
+                    return m;
+                };\n`,
+            }
+        }
+
         const entries = Object.entries(entryPoints)
         entries.forEach(([k, v]) => {
             if (typeof k === 'number') {
@@ -46,20 +89,23 @@ const creater: MiddlewareCreater = (conf, options = {}) => {
     const needbuilds = new Set<string>()
     return {
         onSet: async (pathname, data, store) => {
-            const entry = option_map.get(pathname)
-            const options: esbuild.BuildOptions = {
-                write: false,
-                metafile: true,
-                minify: build,
-                ...entry,
-            }
-
             try {
                 let ctx = ctx_map.get(pathname)
                 if (!ctx) {
+                    const entry = option_map.get(pathname)
+                    const options: esbuild.BuildOptions = {
+                        write: false,
+                        metafile: true,
+                        minify: build,
+                        ...entry,
+                    }
                     ctx = await esbuild.context(options)
                 }
                 const result = await ctx.rebuild()
+                let result_js = {
+                    outputPath: pathname,
+                    data,
+                }
                 if (result) {
                     const outputFiles = result.outputFiles;
                     if (outputFiles && outputFiles.length) {
@@ -74,19 +120,26 @@ const creater: MiddlewareCreater = (conf, options = {}) => {
                             deps_map.set(pathname, Object.keys(result.metafile.inputs || {}).map(i => pathname_fixer(i)));
                             
                             let data = Buffer.concat([outputFile.contents]);
-                            return {
-                                outputPath,
-                                data,
+                            store._set(outputPath, data);
+                            if (/\.js$/.test(outputPath)) {
+                                result_js = {
+                                    outputPath,
+                                    data,
+                                }
+                                
                             }
                         }
                     }
                 }
+                if (build) {
+                    ctx.dispose()
+                }
+                return result_js
             }
             catch (e) {
                 console.log(e)
                 return data;
             }
-            return data;
         },
         buildWatcher: async (pathname, type, build) => {
             const find = watches.find(reg => reg.test(pathname))
@@ -111,5 +164,4 @@ const creater: MiddlewareCreater = (conf, options = {}) => {
     }
 }
 export = creater
-
 
