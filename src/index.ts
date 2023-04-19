@@ -15,6 +15,7 @@ const creater: MiddlewareCreater = (conf, options = {}) => {
         watches = [/\.[jet]?sx?$/],
         cacheRoot = '.esbuild',
         externalName = (index: number) => `external${index > 0 ? `.${index}` : ''}.ts`,
+        moduleName = (index: number) => `__LIBS_${index}__`,
         options: runtimeOptions,
     } = options
     const cache_root = path.join(root, cacheRoot)
@@ -37,7 +38,7 @@ const creater: MiddlewareCreater = (conf, options = {}) => {
         }: creater.BuildOptions = Object.assign({}, op, runtimeOptions);
 
         const { external = [] } = base_config
-        const globalName = `__LIBS__${index}`
+        const globalName = moduleName(index)
 
         if (external.length > 0) {
             const libname = externalName(index)
@@ -53,7 +54,7 @@ const creater: MiddlewareCreater = (conf, options = {}) => {
             })
             base_config.banner = {
                 js: `require = function (n) {
-                    var m = window['${globalName}'][n];
+                    var m = this['${globalName}'][n];
                     if (!m && '.' != n[0]) {
                         console.error('module not found:', n);
                     }
