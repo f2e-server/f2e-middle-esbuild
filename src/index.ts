@@ -1,4 +1,4 @@
-import { MiddlewareCreater } from 'f2e-server'
+import { MiddlewareCreater, SetResult } from 'f2e-server'
 import * as esbuild from 'esbuild'
 import * as path from 'path'
 import * as fs from 'fs'
@@ -96,7 +96,7 @@ const creater: MiddlewareCreater = (conf, options = {}) => {
     const needbuilds = new Set<string>()
     return {
         onSet: async (pathname, data, store) => {
-            let result_js = {
+            let result_js: SetResult = {
                 outputPath: pathname,
                 data,
             }
@@ -142,6 +142,7 @@ const creater: MiddlewareCreater = (conf, options = {}) => {
                                 result_js = {
                                     outputPath,
                                     data,
+                                    end: true,
                                 }
                                 
                             }
