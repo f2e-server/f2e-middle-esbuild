@@ -5,7 +5,9 @@ import * as fs from 'fs'
 import { createExternal, defaultOptions, defaultTsconfig, html, pathname_fixer } from './utils'
 
 namespace creater {
-    export type BuildOptions = esbuild.BuildOptions
+    export interface BuildOptions extends esbuild.BuildOptions {
+        ignore_external?: boolean
+    }
 }
 
 const creater: MiddlewareCreater = (conf, options = {}) => {
@@ -17,6 +19,7 @@ const creater: MiddlewareCreater = (conf, options = {}) => {
         externalName = (index: number) => `external${index > 0 ? `.${index}` : ''}.ts`,
         moduleName = (index: number) => `__LIBS_${index}__`,
         options: runtimeOptions,
+        externalOptions = {},
     } = options
     const cache_root = path.join(root, cacheRoot)
     if (!fs.existsSync(cache_root)) {
@@ -34,18 +37,21 @@ const creater: MiddlewareCreater = (conf, options = {}) => {
     const option_map = ([].concat(require(path.join(root, esbuildrc))) as creater.BuildOptions[]).reduce((all, op, index) => {
         const {
             entryPoints,
+            ignore_external = false,
             ...base_config
         }: creater.BuildOptions = Object.assign({}, op, runtimeOptions);
 
         const { external = [] } = base_config
         const globalName = moduleName(index)
 
-        if (external.length > 0) {
+        if (external.length > 0 && !ignore_external) {
             const libname = externalName(index)
             fs.writeFileSync(path.join(cache_root, libname), createExternal(external))
             const entry = `${cacheRoot}/${libname}`
             all.set(entry, {
                 ...require(cache_esbuild),
+                ...externalOptions,
+                minify: build,
                 entryPoints: [entry],
                 globalName,
                 footer: {

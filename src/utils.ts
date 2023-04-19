@@ -18,6 +18,7 @@ export const createExternal = (external: string[]) => {
 
 export const defaultOptions = (root: string): BuildOptions =>  {
     return {
+        write: false,
         treeShaking: false,
         sourcemap: true,
         bundle: true,
