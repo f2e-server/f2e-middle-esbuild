@@ -16,6 +16,7 @@ const creater: MiddlewareCreater = (conf, options = {}) => {
         cacheRoot = '.esbuild',
         externalName = (index: number) => `external${index > 0 ? `.${index}` : ''}.ts`,
         moduleName = (index: number) => `__LIBS_${index}__`,
+        scope = 'window',
         options: runtimeOptions,
     } = options
     const cache_root = path.join(root, cacheRoot)
@@ -49,12 +50,12 @@ const creater: MiddlewareCreater = (conf, options = {}) => {
                 entryPoints: [entry],
                 globalName,
                 footer: {
-                    js: `\nthis['${globalName}'] = ${globalName};\n`
+                    js: `\n${scope}['${globalName}'] = ${globalName};\n`
                 },
             })
             base_config.banner = {
                 js: `require = function (n) {
-                    var m = this['${globalName}'][n];
+                    var m = ${scope}['${globalName}'][n];
                     if (!m && '.' != n[0]) {
                         console.error('module not found:', n);
                     }
