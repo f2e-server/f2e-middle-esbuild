@@ -13,12 +13,19 @@ namespace creater {
 const creater: MiddlewareCreater = (conf, options = {}) => {
     const { root, build } = conf
     const {
+        /** 默认配置文件地址 */
         esbuildrc = '.esbuildrc.js',
+        /** 针对哪些文件监听修改 */
         watches = [/\.[jet]?sx?$/],
+        /** 临时文件地址，需要添加到 .gitignore */
         cacheRoot = '.esbuild',
+        /** external文件名称生成方式 */
         externalName = (index: number) => `external${index > 0 ? `.${index}` : ''}.ts`,
+        /** external导出变量名 */
         moduleName = (index: number) => `__LIBS_${index}__`,
+        /** 运行时修改的通用esbuild编译参数不含 external 包 */
         options: runtimeOptions,
+        /** 运行时修改的external编译参数 */
         externalOptions = {},
     } = options
     const cache_root = path.join(root, cacheRoot)

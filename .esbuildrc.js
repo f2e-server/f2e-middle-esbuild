@@ -6,31 +6,23 @@
 let config = [
     {
         sourcemap: true,
-        treeShaking: false,
-        entryPoints: {
-            libs: 'src/index.libs.tsx',
-        },
-        outdir: 'static',
-        target: 'chrome70',
-        bundle: true,
-        format: 'iife',
-        globalName: '__LIBS__',
-        loader: {
-            '.tsx': 'tsx',
-            '.ts': 'ts',
-        },
-        tsconfig: './tsconfig.json',
-    }, {
-        sourcemap: true,
+        /**
+         * 启动时生成 .esbuild/external.ts 
+         */
         external: [
             'react',
             'react-dom',
         ],
-        inject: ['src/inject.js'],
+        /**
+         * 设置为true时， 不生成 .esbuild/external.ts
+         * @description 自定义参数
+         */
+        ignore_external: false,
+        
         entryPoints: {
             index: 'src/index.tsx'
         },
-        target: 'esnext',
+        target: 'chrome70',
         jsxFactory: 'React.createElement',
         bundle: true,
         format: 'iife',
